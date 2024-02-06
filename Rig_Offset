@@ -1,0 +1,125 @@
+import maya.cmds as cmds
+
+# Offset Group
+
+ShelfTabLayoutJntGen = ""
+
+def offset(arg):
+    selection = cmds.ls(sl=True)
+    
+    for each_selection in selection:
+        parent = cmds.listRelatives(each_selection, parent=True, fullPath=True)
+        transform = cmds.createNode("transform", name = each_selection.split("|")[-1]+"_offset")
+        cmds.matchTransform(transform, each_selection)
+        cmds.parent(each_selection, transform)
+        
+        if parent:
+            cmds.parent(transform, parent)
+            
+def offsetMove(arg):
+    selection = cmds.ls(sl=True)
+    
+    for each_selection in selection:
+        parent = cmds.listRelatives(each_selection, parent=True, fullPath=True)
+        transform = cmds.createNode("transform", name = each_selection.split("|")[-1]+"_offset")
+        transformMove = cmds.createNode("transform", name = each_selection.split("|")[-1]+"_Move")
+        cmds.matchTransform(transform, each_selection)
+        cmds.matchTransform(transformMove, each_selection)
+        cmds.parent(each_selection, transformMove)
+        cmds.parent(transformMove, transform)
+        
+        if parent:
+            cmds.parent(transform, parent)
+
+def offsetHook(arg):
+    selection = cmds.ls(sl=True)
+    
+    for each_selection in selection:
+        parent = cmds.listRelatives(each_selection, parent=True, fullPath=True)
+        transform = cmds.createNode("transform", name = each_selection.split("|")[-1]+"_offset")
+        transformMove = cmds.createNode("transform", name = each_selection.split("|")[-1]+"_Move")
+        transformHook = cmds.createNode("transform", name = each_selection.split("|")[-1]+"_Hook")
+        cmds.matchTransform(transform, each_selection)
+        cmds.matchTransform(transformMove, each_selection)
+        cmds.matchTransform(transformHook, each_selection)
+        cmds.parent(each_selection, transformHook)
+        cmds.parent(transformHook, transformMove)
+        cmds.parent(transformMove, transform)
+        
+        if parent:
+            cmds.parent(transform, parent)
+            
+
+            
+def createMyOffset ():
+
+    myOffset = cmds.textFieldButtonGrp ("Test", query = True, text = True)
+    
+    print(myOffset)
+      
+    selection = cmds.ls(sl=True)
+    for each_selection in selection:
+        parent = cmds.listRelatives(each_selection, parent=True, fullPath=True)
+        transform = cmds.createNode("transform", name = each_selection.split("|")[-1]+"_offset")
+        cmds.matchTransform(transform, each_selection)
+        cmds.parent(each_selection, transform)
+        
+        if parent:
+            cmds.parent(transform, parent)
+            
+    cmds.rename(transform, each_selection.split("|")[-1]+myOffset) 
+        
+
+            
+            
+##############################################################
+##############################################################
+
+def createWindow() :
+
+    global ShelfTabLayoutJntGen
+
+    if cmds.window("PP_RiggTools", exists =True):
+        cmds.deleteUI("PP_RiggTools")
+        
+    win = cmds.window("PP_RiggTools", title="PP_RiggTools",widthHeight=(400,125),sizeable=False)#création de la fenêtre
+    
+    ShelfTabLayoutJntGen = cmds.shelfTabLayout( width = 400)
+    cmds.shelfLayout("Offset Generator")#créer un layout dans le shelf tab layout
+    
+    cmds.text("Create an Offset/Move/Hook group on what you have selected.", width=400,align="center")
+
+    cmds.rowColumnLayout( numberOfColumns = 3,width=400, cs=[(2,50), (3,50)])
+    cmds.button( label = "Offset", command = (offset), width = 100, height=25)
+    cmds.button( label = "Move", command = (offsetMove), width = 100, height=25)
+    cmds.button( label = "Hook", command = (offsetHook), width = 100, height=25)
+    
+    cmds.setParent('..')
+    
+    cmds.rowColumnLayout( numberOfColumns = 1,width=400, )
+    myOffsetText = cmds.textFieldButtonGrp("Test", label='suffix :', buttonLabel='Offset', width = 400, cw=[(2, 150), (3,100)], buttonCommand= createMyOffset )
+    
+    cmds.setParent('..')
+    
+##############################################################
+##############################################################
+
+    return win
+
+try : print (win)
+except :win = "" 
+
+winExists = cmds.window(win, query=True, exists = True )
+
+if winExists :
+    cmds.showWindow(win);
+else :
+
+    cmds.showWindow(createWindow());
+    
+    cmds.setParent('..')
+
+##############################################################
+##############################################################
+
+
