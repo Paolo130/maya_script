@@ -1,0 +1,78 @@
+import maya.cmds as cmds
+
+def create_ctrls_from_bbox():
+    # Get the list of selected objects
+    selected_objects = cmds.ls(sl=True)
+    selected_object_name = selected_objects[0].split(":")[-1]
+    
+    if not selected_objects:
+        cmds.warning("Please select an object or a group to create the rig.")
+        return
+        
+    if selected_objects [0+1]:
+        cmds.warning("Please select one object or one group at a time.")
+        return
+        
+    # Assuming the first selected object is the target object
+    object_name = selected_objects[0]
+
+    # Get the bounding box of the selected object
+    bbox = cmds.exactWorldBoundingBox(object_name)
+
+    # Calculate the dimensions of the bounding box
+    width = bbox[3] - bbox[0]
+    depth = bbox[5] - bbox[2]
+
+    # Calculate the radius of the circle as half of the smaller dimension
+    radius = min(width, depth) / 2.0
+
+    # Create NURBS circles
+    CIRCLE01 = nurbs_circle_01 = cmds.circle( normal=(0, 1, 0), radius=radius*2, name='CTRL_Global_01_'+selected_object_name )[0]
+    cmds.setAttr(".overrideEnabled", 1)
+    cmds.setAttr(".overrideColor", 13)
+
+    CIRCLE02 = nurbs_circle_02 = cmds.circle( normal=(0, 1, 0), radius=radius*1.5, name='CTRL_Global_02_'+selected_object_name )[0]
+    cmds.setAttr(".overrideEnabled", 1)
+    cmds.setAttr(".overrideColor", 17)
+
+    # Center the NURBS circle at the center of the bounding box
+    center = [(bbox[0] + bbox[3]) / 2, (bbox[1] + bbox[4]) / 2, (bbox[2] + bbox[5]) / 2]
+    cmds.move(center[0], center[1], center[2], nurbs_circle_01, absolute=True)
+    cmds.move(center[0], center[1], center[2], nurbs_circle_02, absolute=True)
+    
+    # offset the selected object
+    
+    for each_selection in selected_objects :
+        parent = cmds.listRelatives(each_selection, parent=True, fullPath=True)
+        offset = cmds.createNode("transform", name = selected_object_name.split("|")[-1]+"_offset")
+        cmds.matchTransform(offset, each_selection)
+        cmds.parent(each_selection, offset)
+        
+        if parent:
+            cmds.parent(offset, parent)
+    
+    cmds.parentConstraint (CIRCLE02, offset, mo=True)
+    cmds.scaleConstraint (CIRCLE02, offset, mo=True)
+
+    cmds.select(clear=True)
+    
+   # structure and parents
+   
+    MASTER = cmds.group (name=selected_object_name+"_Master", em=True)
+    
+    GLOBAL = cmds.group (name=selected_object_name+"_GlobalMove_01", em=True)
+    cmds.parent (GLOBAL, MASTER)
+
+    CTRL = cmds.group(em=True, name=selected_object_name+"_CTRLs_01")
+    cmds.parent (CTRL, GLOBAL)
+    
+    GEO = cmds.group(em=True, name=selected_object_name+"_Geo_01")
+    cmds.parent (GEO, MASTER)
+    
+    cmds.parent (offset, GEO)
+    
+    cmds.parent (CIRCLE01, CTRL)
+    
+    cmds.parent (CIRCLE02, CIRCLE02)
+    
+created_nurbs_circle = create_ctrls_from_bbox()
