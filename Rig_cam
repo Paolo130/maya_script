@@ -1,0 +1,106 @@
+import maya.cmds as cmds
+
+#create UI
+
+class Window(object):
+    def __init__(self):
+        self.window = "P_RiggTools"
+        self.title = "Camera generator"
+        self.size = (400, 150)
+        
+        if cmds.window(self.window, exists = True) : 
+            cmds.deleteUI(self.window, window = True)
+            
+        self.window = cmds.window(self.window, title=self.window, widthHeight=self.size, sizeable = False)
+        
+        cmds.columnLayout(adjustableColumn = True, columnAttach=('both', 5), rowSpacing = 8)
+        
+        cmds.text(self.title)
+        cmds.separator(height = 20)
+        
+        self.seqName = cmds.textFieldGrp( label = "SEQUENCE (ex : 010)", cal = [1,"center"])
+        self.shotName = cmds.textFieldGrp( label = "SHOT (ex : 010)", cal = [1,"center"])
+        
+        self.camButton = cmds.button(label = "Create camera", command = self.createCamera)
+        
+        cmds.showWindow()
+    
+    def createCamera (self, *args) :
+        
+        #CREATE CAMERA###############
+        
+        seqCamName = cmds.textFieldGrp(self.seqName, query=True, text=True)
+        shotCamName = cmds.textFieldGrp(self.shotName, query=True, text=True)
+        
+        camera = cmds.camera (displaySafeAction=True, displayResolution=True, displayGateMask=True,filmFit=1) #Create camera
+        cmds.setAttr(".overrideEnabled", 1)
+        cmds.setAttr(".overrideColor", 16)
+        cmds.setAttr(".displayGateMaskOpacity", 1)
+        cmds.setAttr(".displayGateMaskColor", 0, 0, 0,)
+        cmds.select (camera, r=True)
+        renameCam = cmds.rename ("CAM_sq"+seqCamName+"_sh"+shotCamName)
+        
+        move = cmds.group () #Create move group
+        renameMove = cmds.rename (renameCam+"_Move")
+        piv = cmds.xform (renameCam, piv=True, q=True, ws=True) #Align pivot from the camera to the group
+        cmds.xform( renameMove, ws=True, piv=(piv[0], piv[1], piv[2]) )
+        
+        offset = cmds.group ()
+        renameOffset = cmds.rename (renameCam+"_Offset")
+        piv = cmds.xform (renameCam, piv=True, q=True, ws=True) 
+        cmds.xform( renameOffset, ws=True, piv=(piv[0], piv[1], piv[2]) )
+        
+        #CREATE LOCATORS###############
+        
+        locPan = cmds.spaceLocator (name="Loc_Pan_sq"+seqCamName+"_sh"+shotCamName) #Create locator
+        cmds.move (0,5,0, locPan)
+        cmds.makeIdentity( apply=True, t=1, r=1, s=1, n=2 )
+        cmds.setAttr(".overrideEnabled", 1) #Override color
+        cmds.setAttr(".overrideColor", 17)
+        
+        locAim = cmds.spaceLocator (name="Loc_Aim_sq"+seqCamName+"_sh"+shotCamName)
+        cmds.move (0,0,-5, locAim)
+        cmds.makeIdentity( apply=True, t=1, r=1, s=1, n=2 )
+        cmds.setAttr(".overrideEnabled", 1)
+        cmds.setAttr(".overrideColor", 17)
+        
+        cmds.select(locPan, locAim)
+        grpLocs = cmds.group (name="Grp_Locators_"+renameCam)
+        
+        #CREATE CONTROLLERS###############
+        
+        CTRLTrans = cmds.circle(name = "CTRL_Trans_"+renameCam, radius=2, normal=(0,1,0))
+        cmds.setAttr(".overrideEnabled", 1)
+        cmds.setAttr(".overrideColor", 12)
+        grpTrans = cmds.group(name="CTRLTrans"+renameCam+"_Offset")
+        
+        CTRLRot = cmds.circle(name = "CTRL_Rot_"+renameCam, radius=2)
+        #cmds.setAttr(CTRLRot.rx, lock=True, keyable=False, channelBox=False)
+        cmds.setAttr(".overrideEnabled", 1)
+        cmds.setAttr(".overrideColor", 13)
+        grpRot = cmds.group(name="CTRLRot"+renameCam+"_Offset")
+        
+        cmds.select(grpTrans, grpRot)
+        grpCTRLOffset = cmds.group (name="Grp_CTRLs_"+renameCam+"_Offset")
+        grpCTRL = cmds.group (name="Grp_CTRLs_"+renameCam)
+        
+        CTRLAll = cmds.circle(name="CTRL_"+renameCam, radius=3, normal=(0,1,0))
+        cmds.setAttr(".overrideEnabled", 1)
+        cmds.setAttr(".overrideColor", 4)
+        
+        cmds.select(renameOffset, grpCTRL, grpLocs)
+        grpCam = cmds.group (name="Grp_CAM_sq"+seqCamName+"_sh"+shotCamName)
+        
+        cmds.select(CTRLAll, grpCam)
+        grpAll = cmds.group (name="CAM_sq"+seqCamName+"_sh"+shotCamName)
+        
+        #CONSTRAINTS
+        
+        cmds.parentConstraint(CTRLTrans, grpRot)
+        cmds.parentConstraint(CTRLRot, renameMove)
+        cmds.parentConstraint(locPan, grpCTRL, maintainOffset=True)
+        cmds.parentConstraint(CTRLAll, grpCam, maintainOffset=True)
+        cmds.scaleConstraint(CTRLAll, grpCam)
+        cmds.aimConstraint(locAim, grpCTRLOffset, worldUpType="vector", maintainOffset=True)
+        
+mywindow = Window()
